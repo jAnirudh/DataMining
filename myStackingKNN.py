@@ -1,7 +1,8 @@
 # Stemming with Porter Stemming 
+# with two fold cross validation 
 # Stacked with
 # SVD with 400 components, Standard Scaling and 
-# KNN with 10 neighbors and two fold cross validation
+# KNN with 2 neighbors and two fold cross validation
 
 from pandas import read_csv
 from sklearn.svm import SVC
@@ -54,16 +55,27 @@ X = tfv.transform(traindata)
 
 # Initialize model Variables#
 
-tSVD = TruncatedSVD(n_components = 400)      # Initialize SVD
-scl = StandardScaler()     # Initialize the standard scaler 
-svm = SVC(C = 10)
-knn = KNeighborsClassifier()
+tSVD = TruncatedSVD()         # Initialize SVD
+scl = StandardScaler()        # Initialize the standard scaler 
+svm = SVC()                   # Initialize SVC
+knn = KNeighborsClassifier()  # Initialize the KNN
 
-#create sklearn pipeline
-clf = pipeline.Pipeline([('tsvd', tSVD),('scl', scl),('svm', svm)])
+# create sklearn pipeline
+clf = pipeline.Pipeline([('tSVD', tSVD),('scl', scl),('svm', svm)])
 
-clf.fit(X,y)
-stemPred = clf.predict(X)
+# Parameter grid for Stemming
+param_grid = {'svm__C':[10],'tSVD__n_components':[400]}
+
+# scorer
+kappa_scorer = metrics.make_scorer(quadratic_weighted_kappa,greater_is_better = True)
+
+# Stemming model
+model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scoring = kappa_scorer, refit = True, cv = 2, n_jobs = -1)
+
+# Fit model
+model.fit(X,y)
+model.best_estimator_.fit(X,y)
+stemPred = model.best_estimator_.predict(X)
 
 ## KNN PREDICTOR ##
 
@@ -78,8 +90,7 @@ tfv.fit(traindata)
 X = tfv.transform(traindata) 
 
 clf = pipeline.Pipeline([('tSVD',tSVD),('scl',scl),('knn',knn)])
-param_grid = {'knn__n_neighbors':[10],'knn__metric':[DistanceMetric.get_metric('manhattan')],'tSVD__n_components':[400]}
-kappa_scorer = metrics.make_scorer(quadratic_weighted_kappa,greater_is_better = True)
+param_grid = {'knn__n_neighbors':[2],'knn__metric':[DistanceMetric.get_metric('manhattan')],'tSVD__n_components':[400]}
 
 model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scoring = kappa_scorer, refit = True, cv = 2, n_jobs = -1)
 
