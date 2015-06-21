@@ -19,7 +19,7 @@ traindata = []
 # Read the given Data Sets
 
 train = read_csv('../train.csv').fillna("")
-#test = read_csv('../test.csv').fillna("")
+test = read_csv('../test.csv').fillna("")
 
 y = train.median_relevance.values     # Relevance Ratings of Training Data
 
