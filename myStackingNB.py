@@ -88,4 +88,3 @@ trainPred = clf.predict(X)
 finalPred = [int(floor((int(stemPred[i])+trainPred[i])*0.5)) for i in range(len(stemPred))]
 
 print "Kappa Score for Training Data\nStemming+NB\nScore=%f" %(quadratic_weighted_kappa(y, finalPred))
-
