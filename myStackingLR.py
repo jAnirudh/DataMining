@@ -1,16 +1,15 @@
 # Stemming with Porter Stemming 
 # Stacked with
-# SVD with 400 components, Standard Scaling and 
-# KNN with 10 neighbors and two fold cross validation
+# Logistic Regression predictor  
 
 from pandas import read_csv
 from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier,DistanceMetric
+from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 from ml_metrics import quadratic_weighted_kappa
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
-from sklearn import pipeline, grid_search, metrics
+from sklearn import pipeline
 from nltk.stem.porter import PorterStemmer
 from bs4 import BeautifulSoup
 from math import floor
@@ -57,15 +56,14 @@ X = tfv.transform(traindata)
 tSVD = TruncatedSVD(n_components = 400)      # Initialize SVD
 scl = StandardScaler()     # Initialize the standard scaler 
 svm = SVC(C = 10)
-knn = KNeighborsClassifier()
+logReg = LogisticRegression(penalty='l2', dual=True, tol=0.00001,C=1.0, fit_intercept=True, intercept_scaling=1.0,class_weight='auto', random_state=1)
 
 #create sklearn pipeline
 clf = pipeline.Pipeline([('tsvd', tSVD),('scl', scl),('svm', svm)])
-
 clf.fit(X,y)
 stemPred = clf.predict(X)
 
-## KNN PREDICTOR ##
+## Logistic Regression ##
 
 # do some lambda magic on text columns
 
@@ -77,21 +75,16 @@ traindata = list(train.apply(lambda x:'%s %s %s' % (x['query'],x['product_title'
 tfv.fit(traindata)
 X = tfv.transform(traindata) 
 
-clf = pipeline.Pipeline([('tSVD',tSVD),('scl',scl),('knn',knn)])
-param_grid = {'knn__n_neighbors':[10],'knn__metric':[DistanceMetric.get_metric('manhattan')],'tSVD__n_components':[400]}
-kappa_scorer = metrics.make_scorer(quadratic_weighted_kappa,greater_is_better = True)
-
-model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scoring = kappa_scorer, refit = True, cv = 2, n_jobs = -1)
+clf = pipeline.Pipeline([('tsvd', tSVD),('scl', scl),('logReg', logReg)])
 
 # Fit Model
 
-model.fit(X, y)
-model.best_estimator_.fit(X,y)
-trainPred = model.best_estimator_.predict(X)
+clf.fit(X, y)
+trainPred = clf.predict(X)
 
 # Averaging predicted relevance values
 
 finalPred = [int(floor((int(stemPred[i])+trainPred[i])*0.5)) for i in range(len(stemPred))]
 
-print "Kappa Score for Training Data\nStemming+KNN\nScore=%f" %(quadratic_weighted_kappa(y, finalPred))
+print "Kappa Score for Training Data\nStemming+LogisticRegression\nScore=%f" %(quadratic_weighted_kappa(y, finalPred))
 
