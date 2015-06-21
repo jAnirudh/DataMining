@@ -84,7 +84,8 @@ model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scori
 # Fit Model
 
 model.fit(X, y)
-trainPred = model.predict(X)
+model.best_estimator_.fit(X,y)
+trainPred = model.best_estimator_.predict(X)
 
 # Averaging predicted relevance values
 
