@@ -4,7 +4,7 @@
 # SVD with 400 components, Standard Scaling and 
 # KNN with 2 neighbors and two fold cross validation
 
-from pandas import read_csv
+from pandas import read_csv, DataFrame
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier,DistanceMetric
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -17,22 +17,22 @@ from bs4 import BeautifulSoup
 from math import floor
 
 traindata = []
+testdata  = []
 
 # Read the given Data Sets
 
 train = read_csv('../train.csv').fillna("")
-#test = read_csv('../test.csv').fillna("")
+test = read_csv('../test.csv').fillna("")
 
 y = train.median_relevance.values     # Relevance Ratings of Training Data
 
 ## Pre-Processing of the Data ##
 
-#idTestx = test.id.values.astype(int)    # isolating the IDs of the Test Data
-#idTrainx = train.id.values.astype(int)  # isolating the IDs of the Train Data
+idTestx = test.id.values.astype(int)    # isolating the IDs of the Test Data
 
 # we dont need ID columns
 train = train.drop('id', axis=1)
-#test = test.drop('id', axis=1)
+test = test.drop('id', axis=1)
 
 # create labels. drop useless columns
 train = train.drop(['median_relevance', 'relevance_variance'], axis=1)
@@ -45,6 +45,10 @@ for i in range(len(y)):
     s=(" ").join(["q"+ z for z in BeautifulSoup(train["query"][i]).get_text(" ").split(" ")]) + " " + (" ").join(["z"+ z for z in BeautifulSoup(train.product_title[i]).get_text(" ").split(" ")]) + " " + BeautifulSoup(train.product_description[i]).get_text(" ")
     s= (" ").join([stemmer.stem(z) for z in s.split(" ")])
     traindata.append(s)
+for i in range(len(idTestx)):
+    s=(" ").join(["q"+ z for z in BeautifulSoup(test["query"][i]).get_text(" ").split(" ")]) + " " + (" ").join(["z"+ z for z in BeautifulSoup(test.product_title[i]).get_text(" ").split(" ")]) + " " + BeautifulSoup(test.product_description[i]).get_text(" ")
+    s= (" ").join([stemmer.stem(z) for z in s.split(" ")])
+    testdata.append(s)
 
 # Initialize tf-idf vectorization function
 
@@ -52,6 +56,7 @@ tfv = TfidfVectorizer(min_df=3,  max_features=None,strip_accents='unicode', anal
 
 tfv.fit(traindata)
 X = tfv.transform(traindata)
+X_test = tfv.transform(testdata)
 
 # Initialize model Variables#
 
@@ -75,19 +80,20 @@ model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scori
 # Fit model
 model.fit(X,y)
 model.best_estimator_.fit(X,y)
-stemPred = model.best_estimator_.predict(X)
+stemPred = model.best_estimator_.predict(X_test)
 
 ## KNN PREDICTOR ##
 
 # do some lambda magic on text columns
 
 traindata = list(train.apply(lambda x:'%s %s %s' % (x['query'],x['product_title'], x['product_description']),axis=1))
-#testdata = list(test.apply(lambda x:'%s %s %s' % (x['query'],x['product_title'], x['product_description']),axis=1))
+testdata = list(test.apply(lambda x:'%s %s %s' % (x['query'],x['product_title'], x['product_description']),axis=1))
 
 # Fit TFIDF
 
 tfv.fit(traindata)
-X = tfv.transform(traindata) 
+X = tfv.transform(traindata)
+X_test = tfv.transform(testdata)
 
 clf = pipeline.Pipeline([('tSVD',tSVD),('scl',scl),('knn',knn)])
 param_grid = {'knn__n_neighbors':[2],'knn__metric':[DistanceMetric.get_metric('manhattan')],'tSVD__n_components':[400]}
@@ -98,11 +104,14 @@ model = grid_search.GridSearchCV(estimator = clf, param_grid = param_grid, scori
 
 model.fit(X, y)
 model.best_estimator_.fit(X,y)
-trainPred = model.best_estimator_.predict(X)
+trainPred = model.best_estimator_.predict(X_test)
 
 # Averaging predicted relevance values
 
 finalPred = [int(floor((int(stemPred[i])+trainPred[i])*0.5)) for i in range(len(stemPred))]
 
-print "Kappa Score for Training Data\nStemming+KNN\nScore=%f" %(quadratic_weighted_kappa(y, finalPred))
+#print "Kappa Score for Training Data\nStemming+KNN\nScore=%f" %(quadratic_weighted_kappa(y, finalPred))
 
+    # Create submission file
+submission = DataFrame({"id": idTestx, "prediction": finalPred})
+submission.to_csv("stacking_porterStemming_knn.csv", index=False)
