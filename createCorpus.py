@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import re
 from nltk.stem.porter import PorterStemmer
 
-def Corpus(ip,index,columns):
+def StemmedCorpus(ip,index,columns):
     """
     Description: This function accepts an input Pandas data frame and performs data Stemming using the Porter Stemming Algorithm
 
@@ -12,9 +12,9 @@ def Corpus(ip,index,columns):
                      !! The data if taken from a csv file should be imported using the .fillna("") method!!
            index   : number of rows of the DataFrame 
            columns : List of the Column Labels of the input Dataframe
-           cols    : Columns of input DataFrame to be included in corpus vocabulary
     
     Output:
+           Returns a DataFrame of stemmed input data
            
 
     """
