@@ -1,5 +1,5 @@
 from pandas import read_csv, DataFrame
-from createCorpus import Corpus
+from createCorpus import StemmedCorpus
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.sparse import hstack
 from sklearn.svm import SVC
@@ -42,14 +42,12 @@ testdata2 = list(stemmed_test.apply(lambda x:'%s %s' % (x['query'],x['product_ti
 
 # Initialize tf-idf vectorization function
 
-tfv = TfidfVectorizer(min_df=3,  max_features=None,strip_accents='unicode', analyzer='word',token_pattern=r'\w{1,}',ngram_range=(1, 2), use_idf=1,smooth_idf=1,sublinear_tf=1,stop_words = 'english')
+tfv = TfidfVectorizer(min_df=1,max_features=None,strip_accents='unicode', analyzer='word',token_pattern=r'\w{1,}',ngram_range=(1, 2), use_idf=1,smooth_idf=1,sublinear_tf=1,stop_words = 'english')
  
 tfv.fit(traindata1)
 X1 = tfv.transform(traindata1)
 tfv.fit(traindata2)
 X2 = tfv.transform(traindata2)
-
-X = hstack((X1,X2))
 
 # Initialize Model Variables #
 
@@ -57,9 +55,11 @@ tSVD = TruncatedSVD(n_components=400)
 scl  = StandardScaler()
 svm  = SVC(C=10) 
 
+X = hstack((X1,X2))
+
 #create sklearn pipeline
 
-clf = pipeline.Pipeline([('tSVD', tSVD),('scl', scl),('svm', svm)])
+clf = pipeline.Pipeline([('tSVD',tSVD),('scl', scl),('svm', svm)])
 
 stemPred = cross_val_predict(clf,X,y,cv=2,n_jobs=-1)
 
