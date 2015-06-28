@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import pipeline, grid_search, metrics
 from ml_metrics import quadratic_weighted_kappa
 from sklearn.cross_validation import cross_val_predict
-import math
+from math import floor
 
 # create arrays
 
@@ -64,19 +64,23 @@ tfv = TfidfVectorizer(min_df=5,max_df=500,max_features=None,strip_accents='unico
 # Creating a Sparse Matrix for only query terms 
 tfv.fit(traindata1)
 X1 = tfv.transform(traindata1)
+#X1_test = tfv.transform(testdata1)
 
 # Creating a Sparse Matrix for only product_title terms
 tfv.fit(traindata2)
 X2 = tfv.transform(traindata2)
+#X2_test = tfv.transform(testdata2)
 
 # Passing the vectorized matrices to SVD
 svd = TruncatedSVD(n_components = 400)
 svd.fit(X1)
 X1 = svd.transform(X1)
+#X1_test = svd.transform(X1_test)
 
 svd = TruncatedSVD(n_components = 800)
 svd.fit(X2)
 X2 = svd.transform(X2)
+#X2_test = svd.transform(X2_test)
 
 # Reading data given by Bhavesh
 addFeature_train = read_csv("anirudh.csv")
@@ -84,10 +88,11 @@ addFeature_test  = read_csv("anirudhTest.csv")
 
 # Initialize Model Variables #
 
-clf = pipeline.Pipeline([('scl', StandardScaler()),('svm', SVC(gamma=0.0005))])
+clf = pipeline.Pipeline([('scl', StandardScaler()),('svm', SVC(C=10,gamma=0.0002))])
 
 #Horizontally stacking the two matrices
 X = hstack((X1,X2,addFeature_train.as_matrix()))
+#X_test = hstack((X1_test,X2_test,addFeature_test.as_matrix()))
 
 stemPred = cross_val_predict(clf,X,y,cv=2,n_jobs=-1)
 
@@ -103,24 +108,29 @@ testdata2  = list(test.apply(lambda x:'%s' % (x['product_title']),axis=1))
 # Creating a Sparse Matrix for only query terms 
 tfv.fit(traindata1)
 X1 = tfv.transform(traindata1)
+#X1_test = tfv.transform(testdata1)
 
 # Creating a Sparse Matrix for only product_title terms
 tfv.fit(traindata2)
 X2 = tfv.transform(traindata2)
+#X2_test = tfv.transform(testdata2)
 
 # Passing the vectorized matrices to SVD
 svd = TruncatedSVD(n_components = 400)
 svd.fit(X1)
 X1 = svd.transform(X1)
+#X1_test = svd.transform(X1_test)
 
 svd = TruncatedSVD(n_components = 800)
 svd.fit(X2)
 X2 = svd.transform(X2)
+#X2_test = svd.transform(X2_test)
 
 #Horizontally stacking the two matrices
 X = hstack((X1,X2,addFeature_train.as_matrix()))
+#X_test = hstack((X1_test,X2_test,addFeature_test.as_matrix()))
 
-Pred = cross_val_predict(clf,X_test,cv=2,n_jobs=-1)
+Pred = cross_val_predict(clf,X,y,cv=2,n_jobs=-1)
 print "Kappa Score for Training Data\nWithout Stemming\nScore=%f" %(quadratic_weighted_kappa(y, Pred))
 
 # Averaging predicted relevance values
